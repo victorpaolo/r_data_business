@@ -1,0 +1,604 @@
+---
+title: "Exercise"
+subtitle: "Statistics with R"
+author: "Victor Paolo"
+date: "`r format(Sys.time(), '%d-%m-%Y')`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+set.seed(1234)
+```
+
+
+# Exercise
+
+## Libraries
+
+```{r}
+# All libraries
+library(readxl)
+library(ggplot2)
+library(dplyr)
+library(GGally)
+library(DataExplorer)
+library(tidyverse)
+library(gmodels)
+```
+
+## Introduction
+
+Se pretende identificar ineficiencias en el proceso de venta o factores internos y externos que pueden estar impactando el rendimiento de las mismas de una empresa de dispositivos electrónicos para las franquicias de todo el país.
+
+Las variables son las siguientes:
+
+1.	Rentabieco = Rentabilidad económica
+2.	Rentabifin = Rentabilidad financier
+3.	Endp = Nivel de endeudamiento de las franquicias que venden estos dispositivos, valorado en euros
+4.	Liq = Liquidez monetaria de las franquicias
+5.	Productividad = ratio. Buscar la relación que puede tener con otras variables.
+6.	Coe = cuota de mercado
+7.	Edad = tiempo que llevan las franquicias operando
+8.	Conce = número de entidades que dan este mismo servicio a nivel municipio
+9.	Numac = nº accionistas
+10.	Numpa = nº participados
+11.	Numest = nº establecimientos por empresa
+12.	Estp = nº establecimientos en otras provincias
+
+
+### Download data
+```{r}
+datos_practica=read_excel('DatosPractica.xlsx')
+datos_practica
+```
+
+
+## Basic formating of the data
+
+Teniendo en cuenta la descripción de cada variable, y los valores que véis en éstas, formatead correctamente el dataframe.
+
+Lo primero que necesito saber es qué tipo de datos contiene el dataset y podemos ver lo siguiente con respecto a las variables:
+
+
+```{r}
+str(datos_practica)
+head(datos_practica)
+```
+| Parametro           | Rename        | Descripción                                         | Tipo                           |
+| ------------------- | ------------- | --------------------------------------------------- | ------------------------------ |
+| REGISTRO            | REGISTRO      | Número tienda                                       |                                |
+| PROVINCIA           | provincia     | Nombre provincia                                    | Cualitativas                   |
+| estp                | estp          | nº establecimientos en otras provincias             | Cualitativas                   |
+| grupo               | grupo         | No hay información                                  | Cualitativas                   |
+| fju                 | fju           | No hay información                                  | Cualitativas                   |
+| rentabieco          | rentabieco    | Rentabilidad económica (ROA)                        | Cuantitativas Continuas        |
+| rentabifin          | rentabifin    | Rentabilidad financiera (ROE)                       | Cuantitativas Continuas        |
+| endp                | endp          | Nivel de endeudamiento                              | Cuantitativas Continuas        |
+| liq                 | liq           | Liquidez                                            | Cuantitativas Continuas        |
+| PRODUCTIVIDAD       | productividad | Eficiencia                                          | Cuantitativas Continuas        |
+| VENTAS              | ventas        | Valor de ventas                                     | Cuantitativas Continuas        |
+| coe                 | coe           | Cuota de mercado                                    | Cuantitativas Continuas        |
+| edad                | edad          | Tiempo de la tienda                                 | Cuantitativas Continuas        |
+| NÚMERO DE EMPLEADOS | num_emp       | nº empleados                                        | Cuantitativas Discretas        |
+| conce               | conce         | nº empresas con el mismo servicio a nivel municipio | Cuantitativas Discretas        |
+| numac               | numac         | nº accionistas                                      | Cuantitativas Discretas        |
+| numpa               | numpa         | nº participados                                     | Cuantitativas Discretas        |
+| numest              | numest        | nº establecimientos por empresa                     | Cuantitativas Discretas        |
+
+
+Cualitativas Ordinales --> No hay variables de este tipo 
+Según función --> No hay variables de este tipo
+Registro se quita del dataset porque no aporta una significación a los datos más que para indentificar de qué tienda hablamos, en otras palabras el nombre.
+Se elaboran una serie de renombres en la tabla anterior especificados
+
+```{r}
+names(datos_practica)[9] <- "num_emp"
+names(datos_practica)[8] <- "ventas"
+names(datos_practica)[7] <- "productividad"
+names(datos_practica)[2] <- "provincia"
+
+datos_practica <- datos_practica %>% 
+  select(-REGISTRO)
+```
+
+
+Para el desarrollo de este estudio se sugiere seguir las siguientes instrucciones:
+
+
+
+## Descriptive analysis
+
+Análisis descriptivo. Estudiar la distribución de las variables, así como detectar posibles valores atípicos o relaciones
+
+El el punto 0 hemos podido entender la naturaleza de las variables así que aquí nos nos dedicaremos a entenderlos en detalle cada uno de ellos y a tomar deciciones para modificar el dataset o no. 
+
+Con el fin de poder entender mejor los valores, haremos un analisis exploratorio general de todo el dataset y después nos pondremos a valorar si hemos de tomar acciones para cada parámetro.
+
+```{r}
+df_ej1 <- datos_practica
+
+DataExplorer::create_report(df_ej1, 
+                            output_dir = setwd("C:/Users/vprea/Desktop/Datahack/Datahack Master Analitica/Estadistica/Practica/"),
+                            output_file = "informe_general")
+```
+
+
+Podemos concluir y confirmar con respecto al informe previamente generado que provincia, grupo y fju son variables cualitativas y que para el estp podemos tratarlo como una cualitativa porque sólo tiene variables 0 y 1. 
+
+
+| Parametro           | Rename        | Descripción                                         | Tipo                           |
+| ------------------- | ------------- | --------------------------------------------------- | ------------------------------ |
+| PROVINCIA           | provincia     | Nombre provincia                                    | Cualitativas                   |
+| estp                | estp          | nº establecimientos en otras provincias             | Cualitativas (variables 0 y 1) |
+| grupo               | grupo         | No hay información                                  | Cualitativas                   |
+| fju                 | fju           | No hay información                                  | Cualitativas                   |
+
+
+Según el informe anterior podemos concluir lo siguiente:
+
+- Estp y grupo hacen que el valor 0 cobre importancia sobre el valor 1
+- Fju en cambio cobra importancia el 1, aunque el 0 sigue teniendo una relevancia.
+- Para provincia al ver que no hace una tabla de frecuencias porque tiene demasiados parámetros y es difícil de interpretar haremos una categorización para que estos valores se puedan leer mejor y entendamos mejor los valores
+  - Interior
+  - Costa
+  - Islas
+  
+Antes de generar el informe modificado haremos una tabla de frecuencias sólo para hacernos una idea:
+```{r}
+table(df_ej1$provincia)
+df_ej1 %>% 
+  group_by(provincia) %>% 
+  summarise(frec_abs = n()) %>% 
+  mutate(
+    frec_rel = frec_abs / sum(frec_abs) *100,
+    frecc_acc = cumsum(frec_abs),
+    frec_rel_acc = cumsum(frec_rel)
+  ) %>% 
+  rename(Categoria = provincia)
+
+df_ej1 %>% 
+  ggplot(aes(provincia)) + 
+  geom_bar(stat = "count")
+
+```
+Ahora procedemos a realizar la nueva categorizaión previamente expuesta:
+```{r}
+df_ej1_man <-  df_ej1 %>% 
+  mutate(
+    prov_cat = case_when(
+      provincia == "Alicante" 
+      | provincia == "Almería"  
+      | provincia == "Asturias" 
+      | provincia == "Barcelona" 
+      | provincia == "CEUTA"
+      | provincia == "Cantabria" 
+      | provincia == "Castellón" 
+      | provincia == "Cádiz" 
+      | provincia == "Gerona" 
+      | provincia == "Granada" 
+      | provincia == "Guipúzcoa" 
+      | provincia == "Huelva" 
+      | provincia == "La Coruña"
+      | provincia == "Lugo"
+      | provincia == "MELILLA"
+      | provincia == "Murcia"
+      | provincia == "Málaga"
+      | provincia == "Pontevedra"
+      | provincia == "Tarragona"
+      | provincia == "Valencia"
+      | provincia == "Vizcaya" ~ "Costa",
+      provincia == "Baleares"
+      | provincia == "Las Palmas"
+      | provincia == "Sta. Cruz de Tenerife" ~ "Islas",
+      T ~ "Interior"
+    )
+  ) 
+```
+
+
+Realizamos el nuevo informe con las provincias categorizadas.
+
+```{r}
+DataExplorer::create_report(df_ej1_man, 
+                            output_dir = setwd("C:/Users/vprea/Desktop/Datahack/Datahack Master Analitica/Estadistica/Practica/"),
+                            output_file = "informe_general_provincia_cat")
+```
+
+
+Ahora es momento de entender y evaluar cada una de las variables, con el fin de eliminar los valores atípicos si es que aplica.
+
+Un resumen de a qué variables que continen outliers, según podemos observar en la sección de QQ Plot del informe:
+
+| Parametro     | Valores atípicos |
+| ------------- | ---------------- |
+| REGISTRO      |                  |
+| provincia     | No aplica        |
+| estp          | No aplica        |
+| grupo         | No aplica        |
+| fju           | No aplica        |
+| rentabieco    | Si               |
+| rentabifin    | Si               |
+| endp          | Si               |
+| liq           | Si               |
+| productividad | Si               |
+| ventas        | Si               |
+| coe           | Si               |
+| edad          | Si               |
+| num_emp       | Si               |
+| conce         | Si               |
+| numac         | Si               |
+| numpa         | Si               |
+| numest        | Si               |
+
+Para poder realizarlo primero separamos por aquellos que sean valores numéricos: 
+
+```{r}
+df_ej1_man_numeric <- 
+  select_if(df_ej1_man, is.numeric)
+```
+
+
+Creamos una función que nos elimine aquellos valores de cada variable que tenga outliers:
+- Primero identificamos los outliers
+- Segundo elaboramos la función para sacar del dataset aquellos outliers
+
+```{r}
+outliers <- function(x) {
+  
+  Q1 <- quantile(x, probs=.25)
+  Q3 <- quantile(x, probs=.75)
+  iqr = Q3-Q1
+  
+  upper_limit = Q3 + (iqr*1.5)
+  lower_limit = Q1 - (iqr*1.5)
+  
+  x > upper_limit | x < lower_limit
+}
+
+remove_outliers <- function(df, cols = names(df)) {
+  for (col in cols) {
+    df <- df[!outliers(df[[col]]),]
+  }
+  df
+}
+```
+
+
+Ejecutamos la función para todas las columnas numéricas que previamente hemos detectado que tienen outliers:
+
+```{r}
+df_ej1_man_numeric_no_outliers <- 
+  remove_outliers(df_ej1_man_numeric, c("estp","grupo","fju","rentabieco","rentabifin",
+                                      "endp","liq","productividad","ventas","coe","edad","num_emp",
+                                      "conce","numac","numpa","numest"))
+```
+
+
+
+## Dependent variable Sales vs independents variables 
+
+Análisis del Comportamiento de las Ventas y Variables que le Afectan.
+```{r}
+df_ej2 <- datos_practica
+```
+
+
+1. Analizaremos la correlación entre variables
+2. Veremos la relación sin quitar outliers
+3. Analizamos como afecta cada variable a las ventas
+
+Establezcamos unos valores absolutos para detectar el nivel de relación entre parámertros:
+1. Débil: inferior al 0.3
+2. Moderada baja: entre el 0.3 y 0.5
+3. Moderada alta: entre el 0.5 y 0.7
+4. Fuerte: superior al 0.7
+
+```{r}
+plot_correlation(df_ej2)
+```
+
+
+Los que tienen correlación débil o moderada débil los podemos dar por independientes, sin embargo los moderados altos y los fuertes pueden depender una variable de la otra y tal vez es mejor sólo considerar una para analizar el impacto en las ventas:
+- num_emp y coe
+- num_emp y numest
+- edad y fju
+
+También es importante saber cuales son las variables qué más afectan a las ventas:
+- num_emp
+- coe
+
+Cómo el número de empleados tiene mucho efecto sobre las ventas y además tiene una correlación muy fuerte con la cuota de mercado y el número de establecimientos por empresa, no usaremos ni la cuota de mercado ni el número de establecimientos por empresa para establecer blecer las hipotesis correspondientes.
+
+También se ha de tener en cuenta que los valores no son aparejados.
+
+Hemos de analizar para cada variable si son normales o no, lo haremos usando el test de Shapiro
+
+```{r}
+shapiro.test(df_ej2$grupo)
+shapiro.test(df_ej2$estp)
+shapiro.test(df_ej2$rentabieco)
+shapiro.test(df_ej2$rentabifin)
+shapiro.test(df_ej2$endp)
+shapiro.test(df_ej2$liq)
+shapiro.test(df_ej2$productividad)
+shapiro.test(df_ej2$edad)
+shapiro.test(df_ej2$num_emp)
+shapiro.test(df_ej2$conce)
+shapiro.test(df_ej2$numac)
+shapiro.test(df_ej2$numpa)
+```
+
+Al determinar que ninguna de las variables podemos considerarlas normales, haremos para cada una variable miraremos de agruparlas por grupos que más les pueda convenir:
+
+```{r}
+df_ej2_man <-  df_ej2 %>% 
+  mutate(
+    estp_cat = case_when(
+      estp == 0 ~ "No establecimiento",
+      T ~ "Establecimientos"
+    )) %>% 
+  mutate(
+    grupo_cat = case_when(
+      grupo == 0 ~ "No grupo",
+      T ~ "Grupo"
+    )) %>% 
+  mutate(
+    rentabieco_cat = case_when(
+      rentabieco >= 0 ~ "ROA positivo",
+      T ~ "ROA negativo"
+    )) %>% 
+  mutate(
+    rentabifin_cat = case_when(
+      rentabifin >= 0 ~ "ROE positivo",
+      T ~ "ROE negativo"
+    )) %>% 
+  mutate(
+    endp_cat = case_when(
+      endp < 100 ~ "Deuda controlada",
+      T ~ "Deuda no controlada"
+    )) %>% 
+  mutate(
+    liq_cat = case_when(
+      liq  < 20 ~ "Poca liquidez",
+      T ~ "Buena liquidez"
+    )) %>% 
+  mutate(
+    productividad_cat = case_when(
+      productividad <= 20 ~ "bajo",
+      productividad <= 50 ~ "medio",
+      productividad <= 100 ~ "alto",
+      T ~ "hiperproducción"
+    )) %>% 
+  mutate(
+    edad_cat = case_when(
+      edad <= 10 ~ "seed",
+      edad <= 20 ~ "early",
+      edad <= 35 ~ "estable",
+      T ~ "consolidada"
+    )) %>% 
+  mutate(
+    num_emp_cat = case_when(
+      num_emp <= 9 ~ "micro",
+      num_emp <= 49 ~ "pequeña",
+      num_emp <= 249 ~ "mediana",
+      T ~ "grande"
+    )) %>% 
+  mutate(
+    conce_cat = case_when(
+      conce <= 20 ~ "poca",
+      conce <= 50 ~ "moderada",
+      conce <= 100 ~ "alta",
+      T ~ "saturada"
+    )) %>% 
+  mutate(
+    numac_cat = case_when(
+      numac <= 5 ~ "pocos o ninguno",
+      T ~ "muchos"
+    )) %>% 
+  mutate(
+    numpa_cat = case_when(
+      numpa <= 5 ~ "pocos o ninguno",
+      T ~ "muchos"
+    )) %>% 
+  mutate(
+    prov_cat = case_when(
+      provincia == "Alicante" 
+      | provincia == "Almería"  
+      | provincia == "Asturias" 
+      | provincia == "Barcelona" 
+      | provincia == "CEUTA"
+      | provincia == "Cantabria" 
+      | provincia == "Castellón" 
+      | provincia == "Cádiz" 
+      | provincia == "Gerona" 
+      | provincia == "Granada" 
+      | provincia == "Guipúzcoa" 
+      | provincia == "Huelva" 
+      | provincia == "La Coruña"
+      | provincia == "Lugo"
+      | provincia == "MELILLA"
+      | provincia == "Murcia"
+      | provincia == "Málaga"
+      | provincia == "Pontevedra"
+      | provincia == "Tarragona"
+      | provincia == "Valencia"
+      | provincia == "Vizcaya" ~ "Costa",
+      provincia == "Baleares"
+      | provincia == "Las Palmas"
+      | provincia == "Sta. Cruz de Tenerife" ~ "Islas",
+      T ~ "Interior"
+    )
+  ) 
+```
+
+Una vez hecho esto, procedemos a validar cada una de las hipotesis para cada variable :
+Las que tienen 2 grupos con un 95% de confianza y todos con una cola solo excepto el endp:
+```{r}
+wilcox.test(ventas ~ estp_cat, df_ej2_man)
+wilcox.test(ventas ~ grupo_cat, df_ej2_man)
+wilcox.test(ventas ~ rentabieco_cat, df_ej2_man)
+wilcox.test(ventas ~ rentabifin_cat, df_ej2_man)
+wilcox.test(ventas ~ endp_cat, df_ej2_man, alternative="two.sided")
+wilcox.test(ventas ~ liq_cat, df_ej2_man)
+wilcox.test(ventas ~ numac_cat, df_ej2_man)
+wilcox.test(ventas ~ numpa_cat, df_ej2_man)
+```
+
+Las que tienen 3 grupos o más
+```{r}
+kruskal.test(ventas ~ prov_cat, df_ej2_man)
+kruskal.test(ventas ~ edad_cat, df_ej2_man)
+kruskal.test(ventas ~ num_emp_cat, df_ej2_man)
+kruskal.test(ventas ~ conce_cat, df_ej2_man)
+```
+
+Podemos resumir los valores en la siguiente forma:
+
+| Parametro     | Corr a Ventas | Correlación  | Normal?      | Grupos | Test con Ventas | Conclusión                                                   |
+| ------------- | ------------- | ------------ | ------------ | ------ | --------------- | ------------------------------------------------------------ |
+| REGISTRO      |               |              |              |        | No aplica       |                                                              |
+| provincia     | No aplica     |              | No           | 3      | Kruskall Walls  | Aceptamos hipotesis alternativa, tienen efecto sobre las ventas |
+| estp          | Bajo          |              | No           | 2      | Mann-Whitney U  | Aceptamos hipotesis alternativa, tienen efecto sobre las ventas |
+| grupo         | Bajo          |              | No           | 2      | Mann-Whitney U  | Aceptamos hipotesis alternativa, tienen efecto sobre las ventas |
+| fju           | Bajo          | edad         | edad         | 0      | Con edad        |                                                              |
+| rentabieco    | Bajo          |              | No           | 2      | Mann-Whitney U  | Aceptamos hipotesis alternativa, tienen efecto sobre las ventas |
+| rentabifin    | Bajo          |              | No           | 2      | Mann-Whitney U  | Aceptamos hipotesis alternativa, tienen efecto sobre las ventas |
+| endp          | Bajo          |              | No           | 2      | Mann-Whitney U  | Aceptamos hipotesis alternativa, tienen efecto sobre las ventas |
+| liq           | Bajo          |              | No           | 2      | Mann-Whitney U  | Aceptamos hipotesis alternativa, tienen efecto sobre las ventas |
+| productividad | Bajo          |              | No           |        |                 |                                                              |
+| ventas        | --            |              | No           | 0      | --              |                                                              |
+| coe           | Alto          | num_emp      | num_emp      | 0      | Con num_emp     |                                                              |
+| edad          | Bajo          | fju          | fju          | 4      | Kruskall Walls  | Aceptamos hipotesis alternativa, tienen efecto sobre las ventas |
+| num_emp       | Alto          | coe y numest | coe y numest | 4      | Kruskall Walls  | Aceptamos hipotesis alternativa, tienen efecto sobre las ventas |
+| conce         | Bajo          |              | No           | 4      | Kruskall Walls  | Aceptamos hipotesis alternativa, tienen efecto sobre las ventas |
+| numac         | Bajo          |              | No           | 2      | Mann-Whitney U  | Aceptamos hipotesis alternativa, tienen efecto sobre las ventas |
+| numpa         | Bajo          |              | No           | 2      | Mann-Whitney U  | Aceptamos hipotesis alternativa, tienen efecto sobre las ventas |
+| numest        | Bajo          | num_emp      | num_emp      | 0      | Con num_emp     |                                                              |
+
+## Contingency table
+
+Realizar una tabla de contingencia entre Ventas y Número de empleados, una vez categorizadas ambas variables, para número de empleados, por ejemplo, la utilizada a nivel Europeo, la cual divide a las empresas en Microempresas (1-9 trabajadores), Pequeña empresa (10-49 trabajadores), Mediana empresa (50-249 trabajadores) y Gran empresa (250 y más trabajadores)).
+
+Lo que haremos es al igual que el número de empleados hemos categorizado por el marco europeo por el nivel de facturación:
+
+```{r}
+df_ej3 <- datos_practica
+
+df_ej3_man <-  df_ej3 %>% 
+  mutate(
+    tam_com_emp = case_when(
+      num_emp <= 9 ~ "micro",
+      num_emp <= 49 ~ "pequeña",
+      num_emp <= 249 ~ "mediana",
+      T ~ "grande"
+    )
+  ) %>% 
+  mutate(
+    tam_com_ven = case_when(
+      ventas <= 2000 ~ "micro",
+      ventas <= 10000 ~ "pequeña",
+      ventas <= 50000 ~ "mediana",
+      T ~ "grande"
+    )
+  )
+```
+
+Generamos la tabla de contingencias
+```{r}
+gmodels::CrossTable(df_ej3_man$tam_com_emp, df_ej3_man$tam_com_ven)
+```
+
+
+
+## 2 Citites Comparisson
+
+Comparar las ventas entre Madrid y Barcelona. 
+
+Primero filtramos en el dataset por las ciudades que nos interesan.
+```{r}
+
+df_ej4 <- datos_practica
+
+df_ej4_madbcn <- df_ej4 %>% 
+  filter(provincia == "Madrid" | provincia == "Barcelona") 
+
+```
+
+Comparamos las variables continuas entre las dos ciudades
+
+```{r}
+plot(ventas ~ ciudad, df_ej4_madbcn)
+plot(rentabieco ~ ciudad, df_ej4_madbcn)
+plot(rentabifin ~ ciudad, df_ej4_madbcn)
+plot(endp ~ ciudad, df_ej4_madbcn)
+plot(liq ~ ciudad, df_ej4_madbcn)
+plot(numac ~ ciudad, df_ej4_madbcn)
+plot(numpa ~ ciudad, df_ej4_madbcn)
+```
+
+
+
+## Model for prediction
+
+Presentación del modelo de predicción de las ventas para el siguiente año y describirla adecuadamente.
+
+Para que la predicción sea más eficiente se ha dispuesto de quitar todas las provincias y de añadir una columna en sus reemplazo categorizandolas (interior, costa e islas)
+```{r}
+df_ej5 <- datos_practica
+
+df_ej5_man <-  df_ej5 %>% 
+  mutate(
+    prov_cat = case_when(
+      provincia == "Alicante" 
+      | provincia == "Almería"  
+      | provincia == "Asturias" 
+      | provincia == "Barcelona" 
+      | provincia == "CEUTA"
+      | provincia == "Cantabria" 
+      | provincia == "Castellón" 
+      | provincia == "Cádiz" 
+      | provincia == "Gerona" 
+      | provincia == "Granada" 
+      | provincia == "Guipúzcoa" 
+      | provincia == "Huelva" 
+      | provincia == "La Coruña"
+      | provincia == "Lugo"
+      | provincia == "MELILLA"
+      | provincia == "Murcia"
+      | provincia == "Málaga"
+      | provincia == "Pontevedra"
+      | provincia == "Tarragona"
+      | provincia == "Valencia"
+      | provincia == "Vizcaya" ~ "Costa",
+      provincia == "Baleares"
+      | provincia == "Las Palmas"
+      | provincia == "Sta. Cruz de Tenerife" ~ "Islas",
+      T ~ "Interior"
+    )
+  ) %>% 
+  select(-provincia)
+```
+
+Una vez hecho esto podemos analizar los datos:
+```{r}
+model <- lm(ventas~.,df_ej5_man)
+summary(model)
+```
+
+Podemos destacar que todos los que tienen 3 asteríscos que el p-value es significativo, lo podría indicar una aceptación la hipotesis nula. Sin embargo el p-value es inferior al 5% podemos aceptar la hipotesis alternativa que indica que las ventas se ven afectadas por el resto de variables de una uotra forma según los efectos previamente descritos.
+
+Podemos concluir que al tener un R-squared alto que la varianza se ve fuertemente impactadas por las variables, además de una alta intensidad destacada por el R-squared ajustado.
+
+Por el estadístico F podemos concluir que aceptamos la Hipotesis alternativa porque está muy lejos del 1, lo que implica que hay una relación entre las variables independiente y dependientes.
+
+
+
+## Preguntas
+
+Preguntas y comentarios que tengo que quiero resolver pero no entiendo cómo debo aplicarlo en el trabajo del día a día:
+1. Yo intento categorizar todo, pero ¿esto es una buena praxis? aparte de la aplicación sobre la inferencia estadística
+2. Siempre me hago la misma pregunta: ¿el dataset es una muestra o la población? porque si hablamos de usuarios en una web será la población porque no hay otros usuarios usandola, sin embargo si hablamos de temas de salud es algo común en el mundo.
+3. ¿Porque no me aparce ninguna normal con el Shapiro? Las que tengo por el histograma no las veo normal, pero a la pregunta anterior si es una muestra tal vez si es normal.
+4. Quiero aprender más y estoy haciendo lo de Khanaacademy de nuevo porque necesito consolidar los concimientos
+5. ¿Algún dataset en Kaggel para hacer de nuevo un estudio? ¿Otro caso? Quiero practicar
