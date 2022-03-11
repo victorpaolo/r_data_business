@@ -591,14 +591,3 @@ Podemos destacar que todos los que tienen 3 asteríscos que el p-value es signif
 Podemos concluir que al tener un R-squared alto que la varianza se ve fuertemente impactadas por las variables, además de una alta intensidad destacada por el R-squared ajustado.
 
 Por el estadístico F podemos concluir que aceptamos la Hipotesis alternativa porque está muy lejos del 1, lo que implica que hay una relación entre las variables independiente y dependientes.
-
-
-
-## Preguntas
-
-Preguntas y comentarios que tengo que quiero resolver pero no entiendo cómo debo aplicarlo en el trabajo del día a día:
-1. Yo intento categorizar todo, pero ¿esto es una buena praxis? aparte de la aplicación sobre la inferencia estadística
-2. Siempre me hago la misma pregunta: ¿el dataset es una muestra o la población? porque si hablamos de usuarios en una web será la población porque no hay otros usuarios usandola, sin embargo si hablamos de temas de salud es algo común en el mundo.
-3. ¿Porque no me aparce ninguna normal con el Shapiro? Las que tengo por el histograma no las veo normal, pero a la pregunta anterior si es una muestra tal vez si es normal.
-4. Quiero aprender más y estoy haciendo lo de Khanaacademy de nuevo porque necesito consolidar los concimientos
-5. ¿Algún dataset en Kaggel para hacer de nuevo un estudio? ¿Otro caso? Quiero practicar
